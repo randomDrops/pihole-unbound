@@ -1,0 +1,70 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "${EXT_WEB_PORT}:80/tcp"
+    networks:
+      extvlan:
+        ipv4_address: ${PIHOLE_LAN_IP}
+      bridge:
+        ipv4_address: ${PIHOLE_BRIDGE_IP}
+    volumes:
+      - pihole:/etc/pihole/
+      - dnsmasq.d:/etc/dnsmasq.d/
+    environment:
+      - FTLCONF_LOCAL_IPV4=${PIHOLE_LAN_IP}
+      - TZ=${TIMEZONE:-UTC}
+      - WEBPASSWORD=inUK@161
+      - PIHOLE_DNS_=${UNBOUND_BRIDGE_IP}
+      #- VIRTUAL_HOST=pihole-docker
+      #- WEBTHEME=default-auto
+      #- DNSMASQ_LISTENING=local
+      #- WEB_BIND_ADDR=${PIHOLE_LAN_IP}
+      #- WEB_PORT=80
+      - SKIPGRAVITYONBOOT=1
+    restart: unless-stopped
+  unbound:
+    container_name: unbound-rpi
+    image: mvance/unbound-rpi:latest
+    networks:
+      bridge:
+        ipv4_address: ${UNBOUND_BRIDGE_IP}
+    volumes:
+      - unbound:/opt/unbound/etc/unbound/
+    restart: unless-stopped
+
+networks:
+  extvlan:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      driver: default
+      config:
+        - subnet: ${LAN_SUBNET}
+          gateway: ${LAN_GATEWAY}
+  bridge:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${BRIDGE_SUBNET}
+
+volumes:
+  pihole:
+  dnsmasq.d:
+  unbound:
+
+------------------------------------
+  
+PIHOLE_LAN_IP=192.168.14.9
+LAN_SUBNET=192.168.14.0/24
+LAN_GATEWAY=192.168.14.1
+PIHOLE_BRIDGE_IP=172.16.14.4
+UNBOUND_BRIDGE_IP=172.16.14.6
+BRIDGE_SUBNET=172.16.14.0/24
+TIMEZONE=Europe/London
+EXT_WEB_PORT=64080
