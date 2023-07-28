@@ -1,0 +1,44 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "${EXT_WEB_PORT}:80/tcp"
+    networks:
+      bridge:
+        ipv4_address: ${PIHOLE_BRIDGE_IP}
+    volumes:
+      - pihole:/etc/pihole/
+      - dnsmasq.d:/etc/dnsmasq.d/
+    environment:
+      - FTLCONF_LOCAL_IPV4=${PIHOLE_EXT_IP}
+      - TZ=${TIMEZONE:-UTC}
+      - WEBPASSWORD=
+      - PIHOLE_DNS_=${UNBOUND_BRIDGE_IP}
+      - SKIPGRAVITYONBOOT=1
+      - QUERY_LOGGING=false
+    restart: unless-stopped
+  unbound:
+    container_name: unbound-rpi
+    image: mvance/unbound-rpi:latest
+    networks:
+      bridge:
+        ipv4_address: ${UNBOUND_BRIDGE_IP}
+    volumes:
+      - unbound:/opt/unbound/etc/unbound/
+    restart: unless-stopped
+
+networks:
+  bridge:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${BRIDGE_SUBNET}
+
+volumes:
+  pihole:
+  dnsmasq.d:
+  unbound:
